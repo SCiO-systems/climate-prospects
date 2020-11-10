@@ -1,0 +1,189 @@
+	
+	#map {				
+		height: 500px;
+	}
+			
+	#population {				
+		height: 500px;
+	}
+			
+	#rcp {				
+		height: 350px;
+	}
+			
+	#voc {				
+		height: 520px;
+	}
+			
+	#ch4 {				
+		height: 520px;
+	}
+			
+	#nh3 {				
+		height: 520px;
+	}
+			
+	#clim_temp {				
+		height: 520px;
+	}
+			
+	#clim_prec {				
+		height: 520px;
+	}
+
+	#smi {				
+		height: 440px;
+	}			
+			
+	#ndvi {				
+		height: 440px;
+	}			
+
+			
+	.topic-title::after {
+		background: linear-gradient(0deg, #f2f2f2, 10%, rgba(100, 215, 135, .6), 60%, rgba(0, 60, 50, .6) );
+		
+		background-image: linear-gradient(0deg, rgb(242, 242, 242), 10%, rgba(100, 215, 135, 0.6), 60%, rgba(0, 60, 50, 0.6));
+				
+		background-position-x: initial;
+		background-position-y: initial;
+		background-size: initial;
+		background-repeat-x: initial;
+		background-repeat-y: initial;
+		background-attachment: initial;
+		background-origin: initial;
+		background-clip: initial;
+		background-color: initial;
+		content: "";
+		display: block;
+		float: left;
+		bottom: -1px;
+		left: 0;
+		position: absolute;
+		right: 0;
+		top: 0;
+		width: 100%;
+		z-index: 1;
+	}
+
+
+	.topic-title-home::after {
+		background: linear-gradient(0deg, #f2f2f2, 10%, rgba(100, 215, 135, .6), 60%, rgba(0, 60, 50, .6) );
+		
+		background-image: linear-gradient(0deg, #275a4b, 10%, rgba(100, 215, 135, 0.6), 60%, rgba(0, 60, 50, 0.6));
+		
+		background-position-x: initial;
+		background-position-y: initial;
+		background-size: initial;
+		background-repeat-x: initial;
+		background-repeat-y: initial;
+		background-attachment: initial;
+		background-origin: initial;
+		background-clip: initial;
+		background-color: initial;
+		content: "";
+		display: block;
+		float: left;
+		bottom: -1px;
+		left: 0;
+		position: absolute;
+		right: 0;
+		top: 0;
+		width: 100%;
+		z-index: 1;
+	}
+
+
+	.nav-link {
+		opacity: 0.8;
+		text-decoration: none;
+	}
+  
+	.nav-link:hover {
+		opacity: 1;
+		text-decoration: none;
+	}
+
+	.nav-linkL {
+		opacity: 0.6;
+		text-decoration: none;
+	}
+  
+	.nav-linkL:hover {
+		opacity: 1;
+		text-decoration: none;
+	}  
+
+
+	#myBtn {
+		display: none;
+		position: fixed;
+		bottom: 20px;
+		right: 30px;
+		z-index: 99;
+		font-size: 18px;
+		border: none;
+		outline: none;
+		background-color: #555;
+		color: white;
+		cursor: pointer;
+		padding: 15px;
+		border-radius: 4px;
+	}
+	
+	#myBtn:hover {
+		color: #f7941d;
+	}
+	
+	html {
+		scroll-behavior: smooth;
+	}    
+    
+
+	.slidecontainer {
+		width: 100%;
+	}
+
+	.slider {
+		-webkit-appearance: none;
+		width: 100%;
+		height: 15px;
+		border-radius: 5px;
+		background: #d3d3d3;
+		outline: none;
+		opacity: 0.7;
+		-webkit-transition: .2s;
+		transition: opacity .2s;
+	}
+
+	.slider:hover {
+		opacity: 1;
+	}
+
+	.slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 25px;
+		height: 25px;
+		border-radius: 50%;
+		background: #0e62bd;
+		cursor: pointer;
+	}
+
+	.slider::-moz-range-thumb {
+		width: 25px;
+		height: 25px;
+		border-radius: 50%;
+		background: #0e62bd;
+		cursor: pointer;
+	}
+		
+
+
+	@media (min-width: 1200px) {
+		.container, .container-lg, .container-md, .container-sm, .container-xl {
+			max-width: 90%!important;
+		}
+	}
+
+

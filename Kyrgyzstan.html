@@ -1,0 +1,1599 @@
+<html>
+	<head>
+        <meta charset="UTF-8">	
+		
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>		
+		
+		
+		<script src="https://cdn.amcharts.com/lib/4/core.js"></script>
+		<script src="https://cdn.amcharts.com/lib/4/maps.js"></script>		
+		<script src="https://cdn.amcharts.com/lib/4/geodata/kyrgyzstanHigh.js"></script>
+		<script src="https://cdn.amcharts.com/lib/4/geodata/data/countries2.js"></script>
+		<script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>		
+		<script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
+		<script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
+		<script src="https://kit.fontawesome.com/a1d414834f.js" crossorigin="anonymous"></script>
+		
+		
+		<script>		
+			$(document).ready(function (){
+					
+				
+					// Themes begin
+					am4core.useTheme(am4themes_animated);
+					// Themes end
+
+					// Create map instance
+					var chart = am4core.create("map", am4maps.MapChart);
+
+					// Set map definition
+					chart.geodata = am4geodata_kyrgyzstanHigh;
+
+					// Set projection
+					chart.projection = new am4maps.projections.Miller();
+
+
+					chart.seriesContainer.draggable = false;
+					chart.seriesContainer.resizable = false;
+
+					chart.seriesContainer.events.disableType("doublehit");
+					chart.chartContainer.background.events.disableType("doublehit");
+					chart.chartContainer.wheelable = false;
+
+					// Series for World map
+					var worldSeries = chart.series.push(new am4maps.MapPolygonSeries());
+                    worldSeries.exclude = ["TJ-SU-V","UZ-FA-SH","UZ-FA-SO"]
+
+					worldSeries.useGeodata = true;
+
+					var polygonTemplate = worldSeries.mapPolygons.template;
+					//polygonTemplate.tooltipText = "{name}";
+					polygonTemplate.fill = am4core.color("#666666"); //chart.colors.getIndex(0);
+					polygonTemplate.nonScalingStroke = true;
+
+					polygonTemplate.togglable = true;
+
+					var lastSelected;
+					polygonTemplate.events.on("hit", function(ev) {
+
+					  if (lastSelected) {
+
+						lastSelected.isActive = false;
+					  }
+					  //ev.target.series.chart.zoomToMapObject(ev.target);
+					  if (lastSelected !== ev.target) {
+						lastSelected = ev.target;
+					  
+						document.getElementById("popSource").style.display = "none";
+						document.getElementById("popSourceFull").style.display = "block";
+					  
+						//---------------
+						document.getElementById("region").innerHTML = "&nbsp;/&nbsp;"+ev.target.dataItem.dataContext.name;
+						
+						CLIMATE_CODE = ev.target.dataItem.dataContext.id;
+						
+						loadRCP();
+						
+						var pop_top = document.getElementById("popgender").offsetTop;
+						window.scrollTo(0, pop_top);						
+							
+					  }
+					});
+
+					polygonTemplate.adapter.add('tooltipHTML', function(text, target) {
+
+					    if (lastSelected !== target) 
+					       return "<div>{name} <img src='./images/goto.png'/></div>";
+					    else
+					       return "{name}";
+					});
+
+
+					// Hover state
+
+					var ss = polygonTemplate.states.create("active");
+					ss.properties.fill = am4core.color("#5ccaa7");
+          
+					var hs = polygonTemplate.states.create("hover");
+					hs.properties.fill = am4core.color("#6b9ed6");
+					
+					var note = chart.tooltipContainer.createChild(am4core.Label);
+					note.html = "<div style='background:#245445;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>";
+					note.fontSize = 14;
+					note.valign = "bottom";						
+				
+					}
+				);				
+		</script>
+		
+
+<link rel="stylesheet" href="./styles/country_temp.css">
+
+<link href='https://fonts.googleapis.com/css?family=Montserrat' rel='stylesheet'>
+		
+</head>
+<body style="background-color:#f2f2f2; font-family:montserrat">	
+
+<button onclick="topFunction()" id="myBtn" title="Go to top" style="display: none;"><i class="fad fa-chevron-double-up" aria-hidden="true"></i></button>
+
+<script src="HTML_COUNTRY_Localization.js"></script>
+
+<script>
+
+	var MAP_CODE = "KG";
+	var MAP_NAME = "Kyrgyzstan";
+  
+	var CLIMATE_CODE = "KG";
+	
+	var PAGE_LANGUAGE = getParameterValue("lang");
+	
+	PAGE_LANGUAGE = PAGE_LANGUAGE.toLowerCase();
+	
+  
+	if (PAGE_LANGUAGE!=="ru") {
+		if (PAGE_LANGUAGE!=="tj") {
+			if (PAGE_LANGUAGE!=="kg") {
+				if (PAGE_LANGUAGE!=="uz") {
+				
+					PAGE_LANGUAGE="en"; 
+				}
+			}
+		}
+	}	
+	
+	var SECTOR_voc = "agriculture";
+	var SECTOR_ch4 = "agriculture";
+	var SECTOR_nh3 = "agriculture";	
+	
+	window.onload = function(){
+	
+		document.getElementById('langOption').value=PAGE_LANGUAGE;
+  		set_language(PAGE_LANGUAGE);	
+	
+		//------------------------
+		
+		document.getElementById('flag').innerHTML="<img src='./images/flags/"+MAP_CODE+"-flag-800.png' style='height:60px;border-radius:5px;'/>";
+	
+		//------------------------
+		
+		document.getElementById("popSource").style.display = "block";
+		document.getElementById("popSourceFull").style.display = "none";
+
+		//------------------------
+
+		$('input:radio[name=ch4_radio]').change(function() {
+		    SECTOR_ch4 =  this.value;
+			UpdateEmissionsChart("ch4",SECTOR_ch4);
+
+		});
+		$('input:radio[name=nh3_radio]').change(function() {
+			SECTOR_nh3 =  this.value;
+			UpdateEmissionsChart("nh3",SECTOR_nh3);			
+
+		});
+		$('input:radio[name=voc_radio]').change(function() {
+			SECTOR_voc =  this.value;
+			UpdateEmissionsChart("voc",SECTOR_voc);
+			
+		});
+	
+	
+	};	
+
+
+	function open_map() {
+
+		window.location.href = "./ca_map.html?lang="+PAGE_LANGUAGE;
+
+	}
+  
+	function loadLanguage(LCode) {
+
+		window.location.href = "./"+MAP_NAME+".html?lang="+LCode;
+
+	}
+
+
+	//Get the button
+	var mybutton = document.getElementById("myBtn");
+	
+	// When the user scrolls down 20px from the top of the document, show the button
+	window.onscroll = function() {scrollFunction()};
+	function scrollFunction() {
+
+		if ((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight) {
+
+			document.getElementById("myBtn").style.bottom = "75px";			
+			
+		}
+		else {
+		
+			document.getElementById("myBtn").style.bottom = "20px";			
+		
+		}	
+	
+		if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+			mybutton.style.display = "block";
+		} else {
+			mybutton.style.display = "none";
+		}
+	}
+	
+	// When the user clicks on the button, scroll to the top of the document
+	function topFunction() {
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+	}
+	
+</script>
+
+
+<nav class="navbar bg-light navbar-light fixed-top">
+	<div>
+		<img alt="cacip logo" class="d-inline-block mx-3 nav-logo-colored" src="./images/MEL_logo.png" style="height:50px;float:left;margin-left: 50px;"/>
+	
+		<img alt="cacip logo" class="d-inline-block mx-3 nav-logo-colored" src="./images/CP_CA_logo_tr.png" style="height:50px;float:left;margin-left: 50px;"/>
+	</div>
+
+	<select id="langOption" onchange="loadLanguage(this.options[this.selectedIndex].value)" style="display: none;">
+		<option value="en">English</option>
+		<option value="ru">Русский</option>
+		<option value="kg">Қазақша</option>
+		<option value="tj">Тоҷикӣ</option>
+		<option value="uz">Ўзбекча</option>		
+	</select>	
+
+</nav>
+
+<nav class="navbar bg-dark navbar-dark fixed-top" style="margin-top: 66px;">
+    
+  
+    <span style="float:left;color: white;padding-left: 16px;">
+	    <a href="javascript:open_map();" style="color:white;"><span id="lang_bred_map"></span></a>
+		<span>&nbsp;/&nbsp;</span>
+		<a href="javascript:window.location.reload(true)" style="color:white;"><span id="lang_region"></span><span id="lang_bred_country"></span></a>
+		<span id="region"></span>
+	</span>
+
+</nav>
+
+
+
+	
+		<div class="container-fluid" style="padding-top: 50px;">
+		
+		
+			<div class="row" style="height:600px;">
+				<div class="col-12" style="text-align:center;padding:0px;background-color:#000;">					
+					<h2 class="topic-title-home" style="
+						background-image: url(./images/eurasian_steppe_belt.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.9; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -520px;
+						position:relative;
+						height:600px;">					
+					</h2>		
+					<div class="row container" style="margin: auto;">
+					    <div class="col-6">						
+						</div>
+					    <div class="col-6" style="text-align:left;">
+
+ 
+							<div style="color:white; font-size: 56px;font-weight: 600;">							
+								<a href="javascript:window.location.reload(true)" style="color:white; text-decoration:none;"><span id="lang_country"></span> <span id="flag"></span></a>
+							</div>
+                            
+							<div style="margin: 20px 0;">
+								<div style="color:white; font-size: 16px;font-weight: 400;text-transform: uppercase; opacity: 0.8;"><span id="lang_var1"></span> <span style="color: #74E19A;"><span id="lang_var1year"></span></span></div>
+								<div style="color:white; font-size: 32px;font-weight: 600;"><span id="lang_var1value"></span></div>
+							</div>
+
+							<div style="margin: 20px 0;">
+								<div style="color:white; font-size: 16px;font-weight: 400;text-transform: uppercase; opacity: 0.8;"><span id="lang_var2"></span> <span style="color: #74E19A;"><span id="lang_var2year"></span></span></div>
+								<div style="color:white; font-size: 32px;font-weight: 600;"><span id="lang_var2value"></span></div>
+							</div>
+
+							<div style="margin: 20px 0;">
+								<div style="color:white; font-size: 16px;font-weight: 400;text-transform: uppercase; opacity: 0.8;"><span id="lang_var3"></span> <span style="color: #74E19A;"><span id="lang_var3year"></span></span></div>
+								<div style="color:white; font-size: 32px;font-weight: 600;"><span id="lang_var3value"></span></div>
+							</div>
+
+						
+						</div>
+					</div>
+					
+					
+					
+					<div class="row" style="color:white;padding-bottom:60px;margin: 0px;">
+
+						<div class="col-7" style="margin:auto;">
+
+							<div class="row">
+							
+								<div class="col-1"></div>
+								
+								<div class="col-2">
+									<a class="nav-link" href="#about" target="_self" style="color:white;"><i class="fad fa-info-square fa-2x"></i><br><span style="font-size: 14px;font-weight: 400;text-transform: uppercase;"><span id="lang_linkAbout"></span></span></a>
+								</div>
+								<div class="col-2">
+									<a class="nav-link" href="#popgender" target="_self" style="color:white;"><i class="fad fa-users fa-2x"></i><br><span style="font-size: 14px;font-weight: 400;text-transform: uppercase;"><span id="lang_linkPop"></span></span></a>
+								</div>
+								<div class="col-2">
+									<a class="nav-link" href="#emissions" target="_self" style="color:white;"><i class="fad fa-globe-europe  fa-2x"></i><br><span style="font-size: 14px;font-weight: 400;text-transform: uppercase;"><span id="lang_linkEmissions"></span></span></a>
+								</div>
+								<div class="col-2">
+									<a class="nav-link" href="#climate" target="_self" style="color:white;"><i class="fad fa-sun-cloud fa-2x"></i><br><span style="font-size: 14px;font-weight: 400;text-transform: uppercase;"><span id="lang_linkClimate"></span></span></a>
+								</div>					
+								<div class="col-2">
+									<a class="nav-link" href="#indices" target="_self" style="color:white;"><i class="fad fa-align-center fa-2x"></i><br><span style="font-size: 14px;font-weight: 400;text-transform: uppercase;"><span id="lang_linkIndices"></span></span></a>
+								</div>					
+					
+								<div class="col-1"></div>
+								
+							</div>
+							
+							<i class="fal fa-angle-down"></i>
+						</div>
+							
+							
+							
+					</div>
+				
+					
+				</div>
+			</div>		
+
+			<div class="row" id="about" style="background-color:#245445;position: relative;padding-top:100px;">
+				<div class="row container" style="margin: auto;">
+					<div class="col-5" style="text-align:center;">					
+					
+					
+						<div style="color:white;font-size: 21px;font-weight: 300; text-align:left;">
+							<p style="padding-top:50px"><span id="lang_infop1"></span></p>
+							<p style="padding-top:50px"><span id="lang_infop2"></span></p>
+						</div>
+
+					
+					</div>
+
+					<div class="col-7" style="text-align:center;padding:0px 20px 0px 20px;">					
+
+						<div id="map"></div>
+						<div style="padding-top: 24px;padding-bottom: 20px;">									
+							<span style="font-size: 22px;font-weight: 500;padding-right: 20px;color: goldenrod;">
+								<span id="lang_select_region"></span>
+							</span>													
+						</div>						
+
+					</div>
+
+				</div>
+			</div>
+
+			
+			<div class="row" id="scenarios">
+				<div class="col-12" style="text-align:center;padding:0px;">					
+					<h2 class="topic-title" style="
+						background-image: url(./images/photo-save_earth.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.8; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -400px;
+						position:relative;
+						height:512px;">					
+					</h2>		
+					
+					<div style="color:white;padding-bottom:60px;position:relative">
+							<h2><span id="lang_title_rcp"></span></h2>
+					</div>
+					
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+						
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<div style="padding-top: 40px;font-size: 17px; font-weight:500;text-align: left;">
+										<span id="lang_rcp_info1"></span>
+									</div>
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+								<h3 style="padding-top:20px">GtCO<sub>2</sub></h3>
+								<div id="rcp"></div>   
+								<div style="padding-top: 24px;">									
+									<span style="font-size: 22px;font-weight: 500;padding-right: 20px;color: goldenrod;">
+										<span id="lang_select_rcp"></span>
+									</span>													
+								</div>    
+							</div>
+							
+						</div>			
+
+						<div id="rcp_rcp45" style="margin: 20px;text-align: left;">
+							<div style="color: black;font-size: 24px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+								<div style="color: #46a084;">
+									<span id="lang_rcp_rcp45" style="font-weight: 600;"></span>
+								</div>
+								<span style="font-size: 20px;font-weight: 600;"><span id="lang_rcp_rcp45name"></span></span> 
+							</div>
+							<div><span id="lang_rcp_info2"></span></div>
+						</div>    
+
+
+						<div id="rcp_rcp85" style="margin: 20px;text-align: left;">
+							<div style="color: black;font-size: 24px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+								<div style="color: #dc3545;">
+									<span id="lang_rcp_rcp85" style="font-weight: 600;"></span>
+								</div>
+								<span style="font-size: 20px;font-weight: 600;"><span id="lang_rcp_rcp85name"></span></span> 
+							</div>
+							<div><span id="lang_rcp_info3"></span></div>
+						</div> 
+						
+						
+					</div>					
+					
+				</div>
+			</div>
+			
+			
+			<div class="row" id="popgender">
+				<div class="col-12" style="text-align:center;padding:0px;">					
+					<h2 class="topic-title" style="
+						background-image: url(./images/photo-population.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.8; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -400px;
+						position:relative;
+						height:512px;">					
+					</h2>		
+					
+					<h2>
+						<i class="fad fa-users fa-3x" style="color:white"></i>
+					</h2>
+					<div style="color:white;padding-bottom:60px;position:relative">
+							<h2 style="text-transform: uppercase;"><span id="lang_title_pop"></span></h2>
+					</div>
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+						<div id="population"></div>
+							
+						<div id="popSource" style="background:white;"><span id="lang_pop_source"></span>: <a href="https://population.un.org/wpp/" target="_blank">UN World Population Prospects</a></div>
+						
+						<div id="popSourceFull" style="background:white;"><span id="lang_popfull_source"></span>: <a href="https://population.un.org/wpp/" target="_blank">UN World Population Prospects</a> &amp; <a href="https://www.citypopulation.de/" target="_blank">City Population</a>
+						
+						</div>
+						
+					</div>
+					
+				</div>
+			</div>			
+			
+			
+			<div class="row" id="emissions">				
+				<div class="col-12" style="text-align:center;padding:0px;">					
+					<h2 class="topic-title" style="
+						background-image: url(./images/photo-factory-emissions.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.8; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -400px;
+						position:relative;
+						height:512px;">					
+					</h2>		
+					
+					<h2>
+					
+						<i class="fad fa-globe-europe  fa-3x" style="color:white;"></i>
+					</h2>
+					<div style="color:white;padding-bottom:60px;position:relative">
+							<h2 style="text-transform: uppercase;"><span id="lang_title_emissions"></span></h2>
+					</div>
+					
+					<!-- METHANE BLOCK -->					
+					
+					
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+
+
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_ch4_title"></span>
+										<a data-toggle="modal" href="#ch4_Modal" style="color:black;font-size: 12px;font-weight: 600;">
+											<i class="fal fa-info-square fa-2x" aria-hidden="true"></i>
+										</a>										
+										
+										<div style="font-size: 14px;font-weight: 600;text-transform: uppercase;">
+											<span id="lang_ch4_subtitle"></span>
+										</div>		
+									</h2>
+									
+
+  <!-- The Modal -->
+  <div class="modal fade" id="ch4_Modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"><span id="lang_ch4_subtitle_modal"></span></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body" style="text-align: left;">    
+			<span id="lang_ch4_info"></span>		
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal"><span id="lang_ch4_modal_close"></span></button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+
+									<div id="ch4_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_ch4_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_ch4_rcp45name"></span>
+											
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ch4_rcp45_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_ch4_rcp45_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp45_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ch4_rcp45_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ch4_rcp45_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp45_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ch4_rcp45_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp45_val3"></span>
+											</div>
+										</div>
+		
+									</div>
+
+
+									<div id="ch4_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_ch4_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_ch4_rcp85name"></span> 
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ch4_rcp85_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_ch4_rcp85_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp85_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ch4_rcp85_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ch4_rcp85_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp85_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ch4_rcp85_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ch4_rcp85_val3"></span>
+											</div>
+										</div>										
+										
+										
+										
+										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_ch4_source"></span>: <a href='https://www-iam.nies.go.jp/aim/data_tools/aimssp/aimssp.html' target='_blank'>Asia-pacific Integrated Model (AIM)</a></div>
+								
+								<div id="ch4"></div>    
+								
+								<div id="no_ch4" style="height: 200px;display: block;padding-top: 90px;font-size: 24px;font-weight: 500;">
+									<span id="lang_no_ch4"></span>
+								</div>
+								
+								
+								<div style="padding-bottom:20px;">
+								
+									<div class="form-check-inline">
+										<label class="form-check-label" for="ch4_radio1">
+											<input type="radio" class="form-check-input" id="ch4_radio1" name="ch4_radio" value="agriculture" checked>
+											<span id="lang_ch4_sec1"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label" for="ch4_radio2">
+											<input type="radio" class="form-check-input" id="ch4_radio2" name="ch4_radio" value="energy">
+											<span id="lang_ch4_sec2"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input" id="ch4_radio3" name="ch4_radio" value="industry">
+											<span id="lang_ch4_sec3"></span>
+										</label>
+									</div>								
+								
+								</div>
+    
+							</div>
+							
+						</div>						
+				
+
+						
+					</div>	
+
+					
+					<!-- VOCs BLOCK -->					
+					
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+
+
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_voc_title"></span>
+										<a data-toggle="modal" href="#voc_Modal" style="color:black;font-size: 12px;font-weight: 600;">
+											<i class="fal fa-info-square fa-2x" aria-hidden="true"></i>
+										</a>										
+										
+										<div style="font-size: 14px;font-weight: 600;text-transform: uppercase;">
+											<span id="lang_voc_subtitle"></span>
+										</div>		
+									</h2>
+									
+
+  <!-- The Modal -->
+  <div class="modal fade" id="voc_Modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"><span id="lang_voc_subtitle_modal"></span></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body" style="text-align: left;">    
+			<span id="lang_voc_info"></span>		
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal"><span id="lang_voc_modal_close"></span></button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+
+									<div id="voc_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_voc_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_voc_rcp45name"></span>
+											
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_voc_rcp45_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_voc_rcp45_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp45_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_voc_rcp45_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_voc_rcp45_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp45_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_voc_rcp45_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp45_val3"></span>
+											</div>
+										</div>
+		
+									</div>
+
+
+									<div id="voc_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_voc_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_voc_rcp85name"></span> 
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_voc_rcp85_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_voc_rcp85_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp85_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_voc_rcp85_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_voc_rcp85_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp85_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_voc_rcp85_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_voc_rcp85_val3"></span>
+											</div>
+										</div>										
+										
+										
+										
+										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_voc_source"></span>: <a href='https://www-iam.nies.go.jp/aim/data_tools/aimssp/aimssp.html' target='_blank'>Asia-pacific Integrated Model (AIM)</a></div>
+								
+								<div id="voc"></div>    
+								
+								<div id="no_voc" style="height: 200px;display: block;padding-top: 90px;font-size: 24px;font-weight: 500;">
+									<span id="lang_no_voc"></span>
+								</div>
+								
+								
+								<div style="padding-bottom:20px;">
+								
+									<div class="form-check-inline">
+										<label class="form-check-label" for="voc_radio1">
+											<input type="radio" class="form-check-input" id="voc_radio1" name="voc_radio" value="agriculture" checked>
+											<span id="lang_voc_sec1"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label" for="voc_radio2">
+											<input type="radio" class="form-check-input" id="voc_radio2" name="voc_radio" value="energy">
+											<span id="lang_voc_sec2"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input" id="voc_radio3" name="voc_radio" value="industry">
+											<span id="lang_voc_sec3"></span>
+										</label>
+									</div>								
+								
+								</div>
+    
+							</div>
+							
+						</div>						
+				
+
+						
+					</div>
+					
+					
+					<!-- AMMONIA BLOCK -->					
+					
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+
+
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_nh3_title"></span>
+										<a data-toggle="modal" href="#nh3_Modal" style="color:black;font-size: 12px;font-weight: 600;">
+											<i class="fal fa-info-square fa-2x" aria-hidden="true"></i>
+										</a>										
+										
+										<div style="font-size: 14px;font-weight: 600;text-transform: uppercase;">
+											<span id="lang_nh3_subtitle"></span>
+										</div>		
+									</h2>
+									
+
+  <!-- The Modal -->
+  <div class="modal fade" id="nh3_Modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"><span id="lang_nh3_subtitle_modal"></span></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body" style="text-align: left;">    
+			<span id="lang_nh3_info"></span>		
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal"><span id="lang_nh3_modal_close"></span></button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+
+									<div id="nh3_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_nh3_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_nh3_rcp45name"></span>
+											
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_nh3_rcp45_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_nh3_rcp45_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp45_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_nh3_rcp45_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_nh3_rcp45_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp45_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_nh3_rcp45_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp45_val3"></span>
+											</div>
+										</div>
+		
+									</div>
+
+
+									<div id="nh3_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_nh3_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_nh3_rcp85name"></span> 
+										</div>
+										
+										<div style="margin: 20px 0;text-align: left;">
+									
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_nh3_rcp85_var1"></span> 
+												<div style="color: #0e62bd;">
+													<span id="lang_nh3_rcp85_per1" style="font-weight: 600;"></span>
+												</div>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp85_val1"></span>
+											</div>
+										</div> 
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_nh3_rcp85_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_nh3_rcp85_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp85_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_nh3_rcp85_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_nh3_rcp85_val3"></span>
+											</div>
+										</div>										
+										
+										
+										
+										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_nh3_source"></span>: <a href='https://www-iam.nies.go.jp/aim/data_tools/aimssp/aimssp.html' target='_blank'>Asia-pacific Integrated Model (AIM)</a></div>
+								
+								<div id="nh3"></div>    
+								
+								<div id="no_nh3" style="height: 200px;display: block;padding-top: 90px;font-size: 24px;font-weight: 500;">
+									<span id="lang_no_nh3"></span>
+								</div>
+								
+								
+								<div style="padding-bottom:20px;">
+								
+									<div class="form-check-inline">
+										<label class="form-check-label" for="nh3_radio1">
+											<input type="radio" class="form-check-input" id="nh3_radio1" name="nh3_radio" value="agriculture" checked>
+											<span id="lang_nh3_sec1"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label" for="nh3_radio2">
+											<input type="radio" class="form-check-input" id="nh3_radio2" name="nh3_radio" value="energy">
+											<span id="lang_nh3_sec2"></span>
+										</label>
+									</div>
+									<div class="form-check-inline">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input" id="nh3_radio3" name="nh3_radio" value="industry">
+											<span id="lang_nh3_sec3"></span>
+										</label>
+									</div>								
+								
+								</div>
+    
+							</div>
+							
+						</div>						
+				
+
+						
+					</div>
+
+
+
+					
+					
+					
+				</div>
+			</div>
+
+			
+			<div class="row" id="climate">
+				<div class="col-12" style="text-align:center;padding:0px;">					
+					<h2 class="topic-title" style="
+						background-image: url(./images/photo-climate.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.8; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -400px;
+						position:relative;
+						height:512px;">					
+					</h2>		
+					
+					<h2>
+						<i class="fad fa-sun-cloud fa-3x" style="color:white"></i>
+					</h2>
+					<div style="color:white;padding-bottom:60px;position:relative">
+							<h2 style="text-transform: uppercase;"><span id="lang_title_climate"></span></h2>
+					</div>
+
+					<!-- TEMPERATURE BLOCK -->
+
+					<div class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">					
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_clim_temp"></span>
+									</h2>
+    
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_clim_temp_var1"></span> 
+											<div style="color: #0e62bd;">
+												<span id="lang_clim_temp_per1" style="font-weight: 600;"></span>
+											</div>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_temp_val1"></span>
+										</div>
+									</div>
+
+
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_clim_temp_var2"></span> 
+										</div>
+										<div style="color: #0e62bd;text-transform: uppercase;">
+											<span id="lang_clim_temp_var2_by1" style="font-weight: 600;"></span>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_temp_val2"></span>
+										</div>
+										<div style="color: #0e62bd;text-transform: uppercase;">
+											<span id="lang_clim_temp_var2_by2" style="font-weight: 600;"></span>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_temp_val3"></span>
+										</div>
+									</div>
+
+									<div id="temp_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_clim_temp_rcp45" style="font-weight: 600;"></span>
+											</div>											
+											<span id="lang_temp_rcp45name"></span>
+										</div>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_temp_rcp45_min"></span>
+										</div>
+										<span id="lang_clim_temp_rcp45_min_msg" style="text-transform: uppercase;"></span>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_temp_rcp45_max"></span>
+										</div>
+										<span id="lang_clim_temp_rcp45_max_msg" style="text-transform: uppercase;"></span>										
+									</div>    
+
+
+									<div id="temp_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_clim_temp_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_temp_rcp85name"></span>
+										</div>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_temp_rcp85_min"></span>
+										</div>
+										<span id="lang_clim_temp_rcp85_min_msg" style="text-transform: uppercase;"></span>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_temp_rcp85_max"></span>
+										</div>
+										<span id="lang_clim_temp_rcp85_max_msg" style="text-transform: uppercase;"></span>										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_temp_source"></span>: <a href="https://www.worldclim.org/data/monthlywth.html" target="_blank">WorldClim CRU-TS-4.03</a> &amp; <a href="https://www.nasa.gov/nex" target="_blank">NASA Earth Exchange</a></div>
+								
+								<div id="clim_temp"></div>    
+    
+							</div>
+							
+						</div>	
+						
+					</div>			
+
+
+					<!-- PRECIPITATION BLOCK -->
+
+					<div class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">			
+						
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_clim_prec"></span>
+									</h2>
+    
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_clim_prec_var1"></span> 
+											<div style="color: #0e62bd;">
+												<span id="lang_clim_prec_per1" style="font-weight: 600;"></span>
+											</div>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_prec_val1"></span>
+										</div>
+									</div>
+
+
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_clim_prec_var2"></span> 
+										</div>
+										<div style="color: #0e62bd;text-transform: uppercase;">
+											<span id="lang_clim_prec_var2_by1" style="font-weight: 600;"></span>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_prec_val2"></span>
+										</div>
+										<div style="color: #0e62bd;text-transform: uppercase;">
+											<span id="lang_clim_prec_var2_by2" style="font-weight: 600;"></span>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_clim_prec_val3"></span>
+										</div>
+									</div>
+
+									<div id="prec_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_clim_prec_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_prec_rcp45name"></span>
+										</div>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_prec_rcp45_min"></span>
+										</div>
+										<span id="lang_clim_prec_rcp45_min_msg" style="text-transform: uppercase;"></span>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_prec_rcp45_max"></span>
+										</div>
+										<span id="lang_clim_prec_rcp45_max_msg" style="text-transform: uppercase;"></span>										
+									</div>    
+
+
+									<div id="prec_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_clim_prec_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_prec_rcp85name"></span>
+										</div>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_prec_rcp85_min"></span>
+										</div>
+										<span id="lang_clim_prec_rcp85_min_msg" style="text-transform: uppercase;"></span>
+										<div style="color: #6f6f6f;font-size: 26px;font-weight: 600;">
+											<span id="lang_clim_prec_rcp85_max"></span>
+										</div>
+										<span id="lang_clim_prec_rcp85_max_msg" style="text-transform: uppercase;"></span>										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_prec_source"></span>: <a href="https://www.worldclim.org/data/monthlywth.html" target="_blank">WorldClim CRU-TS-4.03</a> &amp; <a href="https://www.nasa.gov/nex" target="_blank">NASA Earth Exchange</a></div>
+								
+								<div id="clim_prec"></div>    
+    
+							</div>
+							
+						</div>						
+						
+					</div>			
+					
+				</div>		
+				
+			</div>
+			
+			
+			
+			<div class="row" id="indices">
+				<div class="col-12" style="text-align:center;padding:0px;">					
+					<h2 class="topic-title" style="
+						background-image: url(./images/photo-spectral.jpg);
+						background-size: cover;
+						background-position: center center;
+						opacity: 0.8; 
+						padding-top:100px;
+						padding-bottom:80px;
+						margin-bottom: -400px;
+						position:relative;
+						height:512px;">					
+					</h2>		
+					
+					<h2>
+						<i class="fad fa-align-center fa-3x" style="color:white"></i>
+					</h2>
+					<div style="color:white;padding-bottom:60px;position:relative">
+							<h2 style="text-transform: uppercase;"><span id="lang_title_indices"></span></h2>
+					</div>
+					
+					<!-- NDVI BLOCK -->					
+					
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+
+
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_ndvi_title"></span>
+										<a data-toggle="modal" href="#ndvi_Modal" style="color:black;font-size: 12px;font-weight: 600;">
+											<i class="fal fa-info-square fa-2x" aria-hidden="true"></i>
+										</a>										
+										
+										<div style="font-size: 14px;font-weight: 600;text-transform: uppercase;">
+											<span id="lang_ndvi_subtitle"></span>
+										</div>		
+									</h2>
+
+  <!-- The Modal -->
+  <div class="modal fade" id="ndvi_Modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"><span id="lang_ndvi_subtitle_modal"></span></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body" style="text-align: left;">    
+			<span id="lang_ndvi_info"></span>		
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal"><span id="lang_ndvi_modal_close"></span></button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+										
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_ndvi_var1"></span> 
+											<div style="color: #0e62bd;">
+												<span id="lang_ndvi_per1" style="font-weight: 600;"></span>
+											</div>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_ndvi_val1"></span>
+										</div>
+									</div>										
+
+
+
+									<div id="ndvi_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_ndvi_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_ndvi_rcp45name"></span>
+											
+										</div>
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp45_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp45_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ndvi_rcp45_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp45_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ndvi_rcp45_val3"></span>
+											</div>
+										</div>
+		
+									</div>
+
+
+									<div id="ndvi_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_ndvi_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_ndvi_rcp85name"></span> 
+										</div>
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp85_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp85_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ndvi_rcp85_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_ndvi_rcp85_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_ndvi_rcp85_val3"></span>
+											</div>
+										</div>										
+										
+										
+										
+										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_ndvi_source"></span>: <a href='https://data.nodc.noaa.gov/cgi-bin/iso?id=gov.noaa.ncdc:C00813' target='_blank'>NOAA Climate Data Record</a> &amp; <a href="https://github.com/SCiO-systems/SIP" target="_blank">SCiO Spectral Indices Prospects (SIP)</a></div>
+								
+								<div id="ndvi"></div>    
+    
+							</div>
+							
+						</div>						
+				
+
+						
+					</div>					
+
+
+					<!-- SMI BLOCK -->					
+
+					<div  class="container" style="background-color:#fff;margin-bottom: 80px;position:relative;box-shadow: 0 2px 16px rgba(0, 0, 0, .1);border-bottom: 1px solid #ddd;">
+
+
+
+						<div class="d-flex">
+						
+							<div style="width: 350px;">
+								<div style="padding-left:20px">
+									<h2 style="padding-top: 40px;font-weight: 600;text-align: left;">
+										<span id="lang_smi_title"></span>
+										<a data-toggle="modal" href="#smi_Modal" style="color:black;font-size: 12px;font-weight: 600;">
+											<i class="fal fa-info-square fa-2x" aria-hidden="true"></i>
+										</a>										
+										
+										<div style="font-size: 14px;font-weight: 600;text-transform: uppercase;">
+											<span id="lang_smi_subtitle"></span>
+										</div>		
+									</h2>
+
+  <!-- The Modal -->
+  <div class="modal fade" id="smi_Modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"><span id="lang_smi_subtitle_modal"></span></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body" style="text-align: left;">    
+			<span id="lang_smi_info"></span>		
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal"><span id="lang_smi_modal_close"></span></button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+										
+									<div style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<span id="lang_smi_var1"></span> 
+											<div style="color: #0e62bd;">
+												<span id="lang_smi_per1" style="font-weight: 600;"></span>
+											</div>
+										</div>
+										<div style="color: black;font-size: 32px;font-weight: 600;">
+											<span id="lang_smi_val1"></span>
+										</div>
+									</div>										
+
+
+
+									<div id="smi_rcp45" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #46a084;">
+												<span id="lang_smi_rcp45" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_smi_rcp45name"></span>
+											
+										</div>
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_smi_rcp45_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_smi_rcp45_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_smi_rcp45_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_smi_rcp45_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_smi_rcp45_val3"></span>
+											</div>
+										</div>
+		
+									</div>
+
+
+									<div id="smi_rcp85" style="margin: 20px 0;text-align: left;">
+										<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+											<div style="color: #dc3545;">
+												<span id="lang_smi_rcp85" style="font-weight: 600;"></span>
+											</div>
+											<span id="lang_smi_rcp85name"></span> 
+										</div>
+									
+										<div style="margin: 20px 0;text-align: left;">
+											<div style="color: black;font-size: 16px;font-weight: 400;opacity: 0.8;text-transform: uppercase;">
+												<span id="lang_smi_rcp85_var2"></span> 
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_smi_rcp85_var2_by1" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_smi_rcp85_val2"></span>
+											</div>
+											<div style="color: #0e62bd;text-transform: uppercase;">
+												<span id="lang_smi_rcp85_var2_by2" style="font-weight: 600;"></span>
+											</div>
+											<div style="color: black;font-size: 32px;font-weight: 600;">
+												<span id="lang_smi_rcp85_val3"></span>
+											</div>
+										</div>										
+										
+										
+										
+										
+									</div> 
+                                    
+								</div>
+							</div>							
+							
+							<div style="flex-grow: 1!important;">
+    
+								<div style="background:white;padding-top: 20px;"><span id="lang_smi_source"></span>: <a href='https://www.esa-soilmoisture-cci.org/node/238' target='_blank'>ESA CCI Soil Moisture Product</a> &amp; <a href="https://github.com/SCiO-systems/SIP" target="_blank">SCiO Spectral Indices Prospects (SIP)</a></div>	
+								
+								<div id="smi"></div>    
+    
+							</div>
+							
+						</div>						
+				
+
+						
+					</div>	
+					
+				</div>		
+				
+			</div>			
+			
+			<div class="row">
+				<nav class="navbar bg-dark navbar-dark" style="width:100%">
+					<div>
+						<img alt="cacip logo" class="d-inline-block mx-3 nav-logo-colored" src="./images/MEL_logo.png" style="height:50px;float:left;margin-left: 50px;">
+	
+						<img alt="cacip logo" class="d-inline-block mx-3 nav-logo-colored" src="./images/CP_CA_logo_tr_white.png" style="height:50px;float:left;margin-left: 50px;">
+					</div>
+
+					<div style="float:right">
+    
+						<spam style="position: relative;color:white;top: 6px;">powered by </spam>
+						<a href="https://scio.systems" target="_blank">
+							<img class="img-responsive pull-right" style="max-height:40px;padding-top:10px;padding-left:10px;" src="./images/SCiO-sLogo-Light.png" height="40px">
+						</a>
+					</div>
+				</nav>			
+			</div>		
+			
+			
+		</div>		
+		
+</body>
+	
+</html>
